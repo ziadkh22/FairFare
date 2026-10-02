@@ -1,26 +1,27 @@
 const mongoose = require('mongoose')
-const User = require('./users')
+const User = require('./user.model')
 
 const driverschema = new mongoose.Schema({
     userid: {
         type: mongoose.Schema.Types.ObjectId,
         ref: User,
-        required: true,
-        unique: true
+        unique: true,
+        required: true
+    },
+    isAvailable: {
+        type: Boolean,
+        default: true
     },
     carinfo: {
         type: String,
         trim: true,
         default: ''
+
     },
-    licenseno: {
+    license: {
         type: String,
         trim: true,
         default: ''
-    },
-    isAvailable: {
-        type: Boolean,
-        default: true
     }
 
 }, { timestamps: true })

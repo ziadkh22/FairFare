@@ -1,21 +1,31 @@
 const mongoose = require('mongoose')
-const User = require('./users')
+const User = require('./user.model')
 
 const rideschema = new mongoose.Schema({
     passengerid: {
         type: mongoose.Schema.Types.ObjectId,
         ref: User,
-        required: true,
+        required: true
     },
     driverid: {
         type: mongoose.Schema.Types.ObjectId,
         ref: User
-
+    },
+    distance: {
+        type: Number,
+        min: 0, // must be positive
+        required: true
+    },
+    fare: {
+        type: Number,
+        default: 30,
+        min: 30
     },
     pickuplocation: {
         type: String,
         trim: true,
         required: true
+
     },
     dropofflocation: {
         type: String,
@@ -27,14 +37,6 @@ const rideschema = new mongoose.Schema({
         enum: ['requested', 'accepted', 'started', 'completed', 'canceled'],
         default: 'requested'
     },
-    distance: {
-        type: Number,
-        default: null
-    },
-    fare: {
-        type: Number,
-        default: null
-    },
     startedat: {
         type: Date,
         default: null
@@ -43,6 +45,7 @@ const rideschema = new mongoose.Schema({
         type: Date,
         default: null
     }
+
 }, { timestamps: true })
 
 const ride = mongoose.model('ride', rideschema)

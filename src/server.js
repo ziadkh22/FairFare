@@ -1,48 +1,76 @@
+//Importing Packages
 const express = require('express')
 const app = express()
-require("dotenv").config()
+
+require('dotenv').config()
 const port = process.env.PORT
+
 const mongoose = require('mongoose')
-const authroutes = require("./routes/authroutes")
-const rideroutes = require("./routes/rideroutes")
-const cors = require('cors')
 
-// Database ------------------------------------------
-// Solving Database Connection Failure
+const authroutes = require('./routes/auth.routes')
+const rideroutes = require('./routes/ride.routes')
+
+const removeLegacyRideIndexes = async () => {
+    const ridesCollectionExists = await mongoose.connection.db
+        .listCollections({ name: 'rides' }, { nameOnly: true })
+        .hasNext()
+
+    if (!ridesCollectionExists) {
+        return
+    }
+
+    const ridesCollection = mongoose.connection.collection('rides')
+    const indexes = await ridesCollection.indexes()
+    const legacyIndexes = indexes.filter(index =>
+        index.unique &&
+        Object.keys(index.key).length === 1 &&
+        ['passengerid', 'driverid'].includes(Object.keys(index.key)[0])
+    )
+
+    for (const legacyIndex of legacyIndexes) {
+        try {
+            await ridesCollection.dropIndex(legacyIndex.name)
+            console.log(`Removed legacy unique ride index: ${legacyIndex.name}`)
+        } catch (error) {
+            if (error.code !== 27) {
+                throw error
+            }
+        }
+    }
+}
+
+// MongoDB Connection
 const dns = require('dns')
-dns.setServers(["1.1.1.1", "8.8.8.8"]);
-
-
-
-// Database Connection
+dns.setServers(['1.1.1.1', '8.8.8.8']);
 mongoose.connect(process.env.MONGO_URI, {
-    dbName: 'FireFare' // database name 
+    dbName: 'FairFare_test'
 })
-    .then(() => console.log('Connected to FireFare MongoDB database.'))
-    .catch(err => console.error(err));
+    .then(async () => {
+        await removeLegacyRideIndexes()
+        console.log("successful database connection")
+        app.listen(port, () => {
+            console.log(`Server is running on http://localhost:${port}`)
+        })
+    })
+    .catch(err => {
+        console.error("Failed to initialize the database:", err)
+        process.exitCode = 1
+    })
 
-
-//Middlewares-------------
-app.use(cors())
+//Routes Middlewares    
 app.use(express.json())
 app.use("/api/auth", authroutes)
 app.use("/api/ride", rideroutes)
 
 
-// validation middleware
+// Error Handling
 app.use((err, req, res, next) => {
     console.error(err)
     const status = err.statuscode || err.status || 500
-    const message = err.message || "Internal server error"
-    res.status(status).json({ message })
+    const message = err.message || 'internal server error'
+    res.status(status).json(message)
 })
 
-// Server Runing Testing------------------------ 
-app.listen(port, async () => {
-
-    console.log(`Service is running on http://localhost:${port}`)
-})
 app.get('/', async (req, res) => {
-    res.send("Hello In Testing Environment")
+    res.send("Server is running....")
 })
-
